@@ -90,6 +90,10 @@ pipeline {
                   -H "Content-Type: application/json" \
                   -d '{
                     "serviceName":"deploytracker",
+                    "environment":"prod",
+                    "triggeredBy":"Jenkins",
+                    "startedAt":"2026-07-14T01:53:47",
+                    "completedAt":"2026-07-14T01:53:47",
                     "version":"${BUILD_NUMBER}",
                     "status":"SUCCESS"
                   }'

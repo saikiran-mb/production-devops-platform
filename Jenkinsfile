@@ -7,8 +7,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "saikiran798/deploytracker"
-        DOCKER_CREDENTIALS = "dockerhub-creds"
-        SONARQUBE_ENV = "SonarQube"
+        DOCKER_CREDENTIALS = "dockerhub-cred"
         MAVEN_OPTS = "-Djava.net.preferIPv4Stack=true"
     }
 
@@ -36,11 +35,15 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 dir('backend') {
-                    withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    withCredentials([
+                        string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')
+                    ]) {
                         sh '''
                             mvn \
                               -Djava.net.preferIPv4Stack=true \
-                              sonar:sonar \
+                              org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar \
+                              -Dsonar.host.url=http://sonarqube:9000 \
+                              -Dsonar.token=$SONAR_TOKEN \
                               -Dsonar.projectKey=deploytracker \
                               -Dsonar.projectName=DeployTracker
                         '''

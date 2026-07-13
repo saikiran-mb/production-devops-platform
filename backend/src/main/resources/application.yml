@@ -1,6 +1,9 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/deploytracker
+    # DB_HOST defaults to localhost for bare `mvn spring-boot:run` on your host.
+    # Docker Compose overrides DB_HOST=postgres so this resolves to the
+    # Postgres container by its service name instead.
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/deploytracker
     username: deploytracker_user
     password: ${DB_PASSWORD}   # never hardcode — pull from env var
   jpa:
@@ -10,6 +13,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
 
 server:
   port: 8080

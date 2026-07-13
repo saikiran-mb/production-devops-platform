@@ -1,51 +1,61 @@
-version: "3.9"
-
 services:
 
-  frontend:
-    build: ./frontend
-    container_name: frontend
+  postgres:
+    image: postgres:16-alpine
+    container_name: deploytracker-postgres
+    environment:
+      POSTGRES_DB: deploytracker
+      POSTGRES_USER: deploytracker_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3000:3000"
-    depends_on:
-      - backend
+      - "5432:5432"
+    volumes:
+      # Named volume - data survives `docker compose down` (but not `-v`).
+      # Without this, every container restart wipes your database.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deploytracker_user -d deploytracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - deploytracker-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: deploytracker-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - deploytracker-net
 
   backend:
-    build: ./backend
-    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: deploytracker-backend
+    environment:
+      DB_HOST: postgres      # resolves via Docker's internal DNS - service name = hostname
+      REDIS_HOST: redis
+      DB_PASSWORD: ${DB_PASSWORD}
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy   # wait for Postgres to be ACTUALLY ready, not just started
+      redis:
+        condition: service_healthy
+    networks:
+      - deploytracker-net
 
-  postgres:
-    image: postgres:16
-    container_name: postgres-db
-    restart: always
-    environment:
-      POSTGRES_DB: devopsdb
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
-    ports:
-      - "5432:5432"
+networks:
+  deploytracker-net:
+    driver: bridge
 
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    ports:
-      - "80:80"
-    depends_on:
-      - frontend
-      - backend
-
-  prometheus:
-    image: prom/prometheus
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-
-  grafana:
-    image: grafana/grafana
-    container_name: grafana
-    ports:
-      - "3001:3000"
+volumes:
+  postgres_data:

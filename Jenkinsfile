@@ -9,6 +9,7 @@ pipeline {
         DOCKER_IMAGE = "saikiran798/deploytracker"
         DOCKER_CREDENTIALS = "dockerhub-creds"
         SONARQUBE_ENV = "SonarQube"
+        MAVEN_OPTS = "-Djava.net.preferIPv4Stack=true"
     }
 
     stages {
@@ -22,7 +23,12 @@ pipeline {
         stage('Build') {
             steps {
                 dir('backend') {
-                    sh 'mvn clean package -DskipTests'
+                    sh '''
+                        mvn \
+                          -Djava.net.preferIPv4Stack=true \
+                          clean package \
+                          -DskipTests
+                    '''
                 }
             }
         }
@@ -32,7 +38,9 @@ pipeline {
                 dir('backend') {
                     withSonarQubeEnv("${SONARQUBE_ENV}") {
                         sh '''
-                            mvn sonar:sonar \
+                            mvn \
+                              -Djava.net.preferIPv4Stack=true \
+                              sonar:sonar \
                               -Dsonar.projectKey=deploytracker \
                               -Dsonar.projectName=DeployTracker
                         '''
@@ -72,10 +80,8 @@ pipeline {
                 ]) {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-
                         docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
                         docker push ${DOCKER_IMAGE}:latest
-
                         docker logout
                     '''
                 }
